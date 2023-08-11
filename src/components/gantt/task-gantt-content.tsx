@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { EventOption } from "../../types/public-types";
-import { BarTask } from "../../types/bar-task";
+import { Datum, EventOption } from "../../types/public-types";
+import { BarDatum } from "../../types/bar-datum";
 import { Arrow } from "../other/arrow";
 import { handleTaskBySVGMouseEvent } from "../../helpers/bar-helper";
 import { isKeyboardEvent } from "../../helpers/other-helper";
-import { TaskItem } from "../task-item/task-item";
+import { DatumItem } from "../datum-item/datum-item";
 import {
   BarMoveAction,
   GanttContentMoveAction,
@@ -12,10 +12,10 @@ import {
 } from "../../types/gantt-task-actions";
 
 export type TaskGanttContentProps = {
-  tasks: BarTask[];
+  data: BarDatum[];
   dates: Date[];
   ganttEvent: GanttEvent;
-  selectedTask: BarTask | undefined;
+  selectedDatum: BarDatum | undefined;
   rowHeight: number;
   columnWidth: number;
   timeStep: number;
@@ -28,15 +28,27 @@ export type TaskGanttContentProps = {
   fontFamily: string;
   rtl: boolean;
   setGanttEvent: (value: GanttEvent) => void;
-  setFailedTask: (value: BarTask | null) => void;
-  setSelectedTask: (taskId: string) => void;
+  setFailedDatum: (value: BarDatum | null) => void;
+  setSelectedDatum: (datumId: string) => void;
 } & EventOption;
 
+export const sortByField = (field: string, datumA: Datum, datumB: Datum) => {
+  const orderA = datumA[field];
+  const orderB = datumB[field];
+  if (orderA > orderB) {
+    return 1;
+  } else if (orderA < orderB) {
+    return -1;
+  } else {
+    return 0;
+  }
+};
+
 export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
-  tasks,
+  data,
   dates,
   ganttEvent,
-  selectedTask,
+  selectedDatum,
   rowHeight,
   columnWidth,
   timeStep,
@@ -48,8 +60,8 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
   fontSize,
   rtl,
   setGanttEvent,
-  setFailedTask,
-  setSelectedTask,
+  setFailedDatum,
+  setSelectedDatum,
   onDateChange,
   onProgressChange,
   onDoubleClick,
@@ -73,8 +85,54 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
   }, [columnWidth, dates, timeStep]);
 
   useEffect(() => {
+    // Check if preventing overlap of bars
+    if (selectedDatum?.preventOverlap) {
+      let topLevelDatum = selectedDatum;
+      while (topLevelDatum.parent) {
+        const parentDatum = data.find(({ id }) => id === topLevelDatum.parent);
+        if (parentDatum) {
+          topLevelDatum = parentDatum;
+        }
+      }
+
+      // Ensure dateConstraints is populated
+      if (!selectedDatum.dateConstraints) {
+        selectedDatum.dateConstraints = {};
+      }
+
+      // Find bars of the same type
+      const sameTypes = data
+        .filter(({ id, type }) => type === topLevelDatum.type && id !== topLevelDatum.id);
+      // console.log(sameTypes);
+      
+      if (sameTypes.length) {
+        // Find any that end BEFORE the selected starts
+        const earlierTypes = sameTypes
+          .filter(({ end }) => end <= topLevelDatum.start)
+          .sort((a, b) => sortByField('end', a, b))
+          .reverse();
+        if (earlierTypes.length) {
+          selectedDatum.dateConstraints.start = {
+            min: earlierTypes[0].end,
+          }
+        }
+
+        // Find any that start AFTER the selected ends
+        const laterTypes = sameTypes
+          .filter(({ start }) => start >= topLevelDatum.end)
+          .sort((a, b) => sortByField('start', a, b));
+        if (laterTypes.length) {
+          selectedDatum.dateConstraints.end = {
+            max: laterTypes[0].start,
+          }
+        }
+      }
+    }
+  }, [data, selectedDatum]);
+
+  useEffect(() => {
     const handleMouseMove = async (event: MouseEvent) => {
-      if (!ganttEvent.changedTask || !point || !svg?.current) return;
+      if (!ganttEvent.changedDatum || !point || !svg?.current) return;
       event.preventDefault();
 
       point.x = event.clientX;
@@ -82,23 +140,23 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
         svg?.current.getScreenCTM()?.inverse()
       );
 
-      const { isChanged, changedTask } = handleTaskBySVGMouseEvent(
+      const { isChanged, changedDatum } = handleTaskBySVGMouseEvent(
         cursor.x,
         ganttEvent.action as BarMoveAction,
-        ganttEvent.changedTask,
+        ganttEvent.changedDatum, // This is the datum
         xStep,
         timeStep,
         initEventX1Delta,
         rtl
       );
       if (isChanged) {
-        setGanttEvent({ action: ganttEvent.action, changedTask });
+        setGanttEvent({ action: ganttEvent.action, changedDatum });
       }
     };
 
     const handleMouseUp = async (event: MouseEvent) => {
-      const { action, originalSelectedTask, changedTask } = ganttEvent;
-      if (!changedTask || !point || !svg?.current || !originalSelectedTask)
+      const { action, originalSelectedDatum, changedDatum } = ganttEvent;
+      if (!changedDatum || !point || !svg?.current || !originalSelectedDatum)
         return;
       event.preventDefault();
 
@@ -106,10 +164,10 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
       const cursor = point.matrixTransform(
         svg?.current.getScreenCTM()?.inverse()
       );
-      const { changedTask: newChangedTask } = handleTaskBySVGMouseEvent(
+      const { changedDatum: newChangedDatum } = handleTaskBySVGMouseEvent(
         cursor.x,
         action as BarMoveAction,
-        changedTask,
+        changedDatum,
         xStep,
         timeStep,
         initEventX1Delta,
@@ -117,9 +175,9 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
       );
 
       const isNotLikeOriginal =
-        originalSelectedTask.start !== newChangedTask.start ||
-        originalSelectedTask.end !== newChangedTask.end ||
-        originalSelectedTask.progress !== newChangedTask.progress;
+        originalSelectedDatum.start !== newChangedDatum.start ||
+        originalSelectedDatum.end !== newChangedDatum.end ||
+        originalSelectedDatum.progress !== newChangedDatum.progress;
 
       // remove listeners
       svg.current.removeEventListener("mousemove", handleMouseMove);
@@ -136,8 +194,8 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
       ) {
         try {
           const result = await onDateChange(
-            newChangedTask,
-            newChangedTask.barChildren
+            newChangedDatum,
+            newChangedDatum.barChildren
           );
           if (result !== undefined) {
             operationSuccess = result;
@@ -148,8 +206,8 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
       } else if (onProgressChange && isNotLikeOriginal) {
         try {
           const result = await onProgressChange(
-            newChangedTask,
-            newChangedTask.barChildren
+            newChangedDatum,
+            newChangedDatum.barChildren
           );
           if (result !== undefined) {
             operationSuccess = result;
@@ -161,7 +219,7 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
 
       // If operation is failed - return old state
       if (!operationSuccess) {
-        setFailedTask(originalSelectedTask);
+        setFailedDatum(originalSelectedDatum);
       }
     };
 
@@ -188,31 +246,32 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
     isMoving,
     point,
     rtl,
-    setFailedTask,
+    setFailedDatum,
     setGanttEvent,
   ]);
 
   /**
-   * Method is Start point of task change
+   * Method is start point of datum change
    */
   const handleBarEventStart = async (
     action: GanttContentMoveAction,
-    task: BarTask,
+    datum: BarDatum,
     event?: React.MouseEvent | React.KeyboardEvent
   ) => {
     if (!event) {
       if (action === "select") {
-        setSelectedTask(task.id);
+        setSelectedDatum(datum.id);
       }
     }
+
     // Keyboard events
     else if (isKeyboardEvent(event)) {
       if (action === "delete") {
         if (onDelete) {
           try {
-            const result = await onDelete(task);
+            const result = await onDelete(datum);
             if (result !== undefined && result) {
-              setGanttEvent({ action, changedTask: task });
+              setGanttEvent({ action, changedDatum: datum });
             }
           } catch (error) {
             console.error("Error on Delete. " + error);
@@ -220,13 +279,14 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
         }
       }
     }
+      
     // Mouse Events
     else if (action === "mouseenter") {
       if (!ganttEvent.action) {
         setGanttEvent({
           action,
-          changedTask: task,
-          originalSelectedTask: task,
+          changedDatum: datum,
+          originalSelectedDatum: datum,
         });
       }
     } else if (action === "mouseleave") {
@@ -234,10 +294,11 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
         setGanttEvent({ action: "" });
       }
     } else if (action === "dblclick") {
-      !!onDoubleClick && onDoubleClick(task);
+      !!onDoubleClick && onDoubleClick(datum);
     } else if (action === "click") {
-      !!onClick && onClick(task);
+      !!onClick && onClick(datum);
     }
+      
     // Change task event start
     else if (action === "move") {
       if (!svg?.current || !point) return;
@@ -245,17 +306,17 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
       const cursor = point.matrixTransform(
         svg.current.getScreenCTM()?.inverse()
       );
-      setInitEventX1Delta(cursor.x - task.x1);
+      setInitEventX1Delta(cursor.x - datum.x1);
       setGanttEvent({
         action,
-        changedTask: task,
-        originalSelectedTask: task,
+        changedDatum: datum,
+        originalSelectedDatum: datum,
       });
     } else {
       setGanttEvent({
         action,
-        changedTask: task,
-        originalSelectedTask: task,
+        changedDatum: datum,
+        originalSelectedDatum: datum,
       });
     }
   };
@@ -263,36 +324,36 @@ export const TaskGanttContent: React.FC<TaskGanttContentProps> = ({
   return (
     <g className="content">
       <g className="arrows" fill={arrowColor} stroke={arrowColor}>
-        {tasks.map(task => {
-          return task.barChildren.map(child => {
+        {data.map(datum => {
+          return datum.barChildren.map(child => {
             return (
               <Arrow
-                key={`Arrow from ${task.id} to ${tasks[child.index].id}`}
-                taskFrom={task}
-                taskTo={tasks[child.index]}
-                rowHeight={rowHeight}
-                taskHeight={taskHeight}
+                key={`Arrow from ${datum.id} to ${data[child.index].id}`}
                 arrowIndent={arrowIndent}
+                datumFrom={datum}
+                datumTo={data[child.index]}
+                rowHeight={rowHeight}
                 rtl={rtl}
+                taskHeight={taskHeight}
               />
             );
           });
         })}
       </g>
       <g className="bar" fontFamily={fontFamily} fontSize={fontSize}>
-        {tasks.map(task => {
+        {data.map(datum => {
           return (
-            <TaskItem
-              task={task}
+            <DatumItem
+              key={datum.id}
               arrowIndent={arrowIndent}
-              taskHeight={taskHeight}
-              isProgressChangeable={!!onProgressChange && !task.isDisabled}
-              isDateChangeable={!!onDateChange && !task.isDisabled}
-              isDelete={!task.isDisabled}
+              datum={datum}
+              isDateChangeable={!!onDateChange && !datum.isDisabled}
+              isDelete={!datum.isDisabled}
+              isProgressChangeable={!!onProgressChange && !datum.isDisabled}
+              isSelected={!!selectedDatum && datum.id === selectedDatum.id}
               onEventStart={handleBarEventStart}
-              key={task.id}
-              isSelected={!!selectedTask && task.id === selectedTask.id}
               rtl={rtl}
+              taskHeight={taskHeight}
             />
           );
         })}

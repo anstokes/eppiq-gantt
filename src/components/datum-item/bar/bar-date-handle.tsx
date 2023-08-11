@@ -1,4 +1,6 @@
 import React from "react";
+
+// Styles
 import styles from "./bar.module.css";
 
 type BarDateHandleProps = {

@@ -1,10 +1,13 @@
 import React, { ReactChild } from "react";
-import { Task } from "../../types/public-types";
+import { Datum } from "../../types/public-types";
 import { addToDate } from "../../helpers/date-helper";
+
+// Styles
 import styles from "./grid.module.css";
+import { getRows } from "../../helpers/other-helper";
 
 export type GridBodyProps = {
-  tasks: Task[];
+  data: Datum[];
   dates: Date[];
   svgWidth: number;
   rowHeight: number;
@@ -12,8 +15,9 @@ export type GridBodyProps = {
   todayColor: string;
   rtl: boolean;
 };
+
 export const GridBody: React.FC<GridBodyProps> = ({
-  tasks,
+  data,
   dates,
   rowHeight,
   svgWidth,
@@ -33,10 +37,11 @@ export const GridBody: React.FC<GridBodyProps> = ({
       className={styles.gridRowLine}
     />,
   ];
-  for (const task of tasks) {
+  const rows = getRows(data);
+  Object.keys(rows).forEach((index) => {
     gridRows.push(
       <rect
-        key={"Row" + task.id}
+        key={"Row" + index}
         x="0"
         y={y}
         width={svgWidth}
@@ -46,7 +51,7 @@ export const GridBody: React.FC<GridBodyProps> = ({
     );
     rowLines.push(
       <line
-        key={"RowLine" + task.id}
+        key={"RowLine" + index}
         x="0"
         y1={y + rowHeight}
         x2={svgWidth}
@@ -55,7 +60,7 @@ export const GridBody: React.FC<GridBodyProps> = ({
       />
     );
     y += rowHeight;
-  }
+  });
 
   const now = new Date();
   let tickX = 0;

@@ -1,8 +1,10 @@
-import { Task, TaskType } from "./public-types";
+import { Datum, DatumType } from "./public-types";
 
-export interface BarTask extends Task {
+export type DatumTypeInternal = DatumType | "smalltask";
+
+export interface BarDatum extends Datum {
   index: number;
-  typeInternal: TaskTypeInternal;
+  typeInternal: DatumTypeInternal;
   x1: number;
   x2: number;
   y: number;
@@ -11,7 +13,7 @@ export interface BarTask extends Task {
   progressWidth: number;
   barCornerRadius: number;
   handleWidth: number;
-  barChildren: BarTask[];
+  barChildren: BarDatum[];
   styles: {
     backgroundColor: string;
     backgroundSelectedColor: string;
@@ -19,5 +21,3 @@ export interface BarTask extends Task {
     progressSelectedColor: string;
   };
 }
-
-export type TaskTypeInternal = TaskType | "smalltask";

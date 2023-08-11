@@ -8,7 +8,7 @@ describe("gantt", () => {
     const root = createRoot(div);
     root.render(
       <Gantt
-        tasks={[
+        data={[
           {
             start: new Date(2020, 0, 1),
             end: new Date(2020, 2, 2),

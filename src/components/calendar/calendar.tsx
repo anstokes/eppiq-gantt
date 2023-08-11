@@ -313,7 +313,8 @@ export const Calendar: React.FC<CalendarProps> = ({
     const bottomValues: ReactChild[] = [];
     const topDefaultHeight = headerHeight * 0.5;
     const dates = dateSetup.dates;
-    for (let i = 0; i < dates.length; i++) {
+    // Skip 1st hour (it overlaps summary table)
+    for (let i = 1; i < dates.length; i++) {
       const date = dates[i];
       const bottomValue = getCachedDateTimeFormat(locale, {
         hour: "numeric",

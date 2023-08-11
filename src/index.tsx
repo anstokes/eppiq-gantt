@@ -1,8 +1,21 @@
+// Core component
 export { Gantt } from "./components/gantt/gantt";
-export { ViewMode } from "./types/public-types";
+
+// Helpers
+export {
+  getChildren,
+  getParents,
+  getRows,
+} from "./helpers/other-helper"
+
+export {
+  ViewMode,
+} from "./types/public-types";
+
+// Public types
 export type {
   GanttProps,
-  Task,
+  Datum,
   StylingOption,
   DisplayOption,
   EventOption,

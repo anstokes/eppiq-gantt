@@ -1,7 +1,9 @@
 import React from "react";
-import styles from "./task-list-header.module.css";
 
-export const TaskListHeaderDefault: React.FC<{
+// Styles
+import styles from "./datum-list-header.module.css";
+
+export const DatumListHeaderDefault: React.FC<{
   headerHeight: number;
   rowWidth: string;
   fontFamily: string;
@@ -42,7 +44,7 @@ export const TaskListHeaderDefault: React.FC<{
             minWidth: rowWidth,
           }}
         >
-          &nbsp;From
+          &nbsp;Initial
         </div>
         <div
           className={styles.ganttTable_HeaderSeparator}
@@ -57,7 +59,7 @@ export const TaskListHeaderDefault: React.FC<{
             minWidth: rowWidth,
           }}
         >
-          &nbsp;To
+          &nbsp;Last
         </div>
       </div>
     </div>

@@ -1,41 +1,44 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Task } from "../../types/public-types";
-import { BarTask } from "../../types/bar-task";
+
+import { Datum } from "../../types/public-types";
+import { BarDatum } from "../../types/bar-datum";
+
+// Styles
 import styles from "./tooltip.module.css";
 
 export type TooltipProps = {
-  task: BarTask;
   arrowIndent: number;
+  datum: BarDatum;
+  datumListWidth: number;
+  fontSize: string;
+  fontFamily: string;
+  headerHeight: number;
+  rowHeight: number;
   rtl: boolean;
+  scrollX: number;
+  scrollY: number;
   svgContainerHeight: number;
   svgContainerWidth: number;
   svgWidth: number;
-  headerHeight: number;
-  taskListWidth: number;
-  scrollX: number;
-  scrollY: number;
-  rowHeight: number;
-  fontSize: string;
-  fontFamily: string;
   TooltipContent: React.FC<{
-    task: Task;
+    datum: Datum;
     fontSize: string;
     fontFamily: string;
   }>;
 };
 export const Tooltip: React.FC<TooltipProps> = ({
-  task,
-  rowHeight,
-  rtl,
-  svgContainerHeight,
-  svgContainerWidth,
-  scrollX,
-  scrollY,
   arrowIndent,
+  datum,
+  datumListWidth,
   fontSize,
   fontFamily,
   headerHeight,
-  taskListWidth,
+  rowHeight,
+  rtl,
+  scrollX,
+  scrollY,
+  svgContainerHeight,
+  svgContainerWidth,
   TooltipContent,
 }) => {
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -46,12 +49,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
       const tooltipHeight = tooltipRef.current.offsetHeight * 1.1;
       const tooltipWidth = tooltipRef.current.offsetWidth * 1.1;
 
-      let newRelatedY = task.index * rowHeight - scrollY + headerHeight;
+      let newRelatedY = datum.index * rowHeight - scrollY + headerHeight;
       let newRelatedX: number;
       if (rtl) {
-        newRelatedX = task.x1 - arrowIndent * 1.5 - tooltipWidth - scrollX;
+        newRelatedX = datum.x1 - arrowIndent * 1.5 - tooltipWidth - scrollX;
         if (newRelatedX < 0) {
-          newRelatedX = task.x2 + arrowIndent * 1.5 - scrollX;
+          newRelatedX = datum.x2 + arrowIndent * 1.5 - scrollX;
         }
         const tooltipLeftmostPoint = tooltipWidth + newRelatedX;
         if (tooltipLeftmostPoint > svgContainerWidth) {
@@ -59,19 +62,19 @@ export const Tooltip: React.FC<TooltipProps> = ({
           newRelatedY += rowHeight;
         }
       } else {
-        newRelatedX = task.x2 + arrowIndent * 1.5 + taskListWidth - scrollX;
+        newRelatedX = datum.x2 + arrowIndent * 1.5 + datumListWidth - scrollX;
         const tooltipLeftmostPoint = tooltipWidth + newRelatedX;
-        const fullChartWidth = taskListWidth + svgContainerWidth;
+        const fullChartWidth = datumListWidth + svgContainerWidth;
         if (tooltipLeftmostPoint > fullChartWidth) {
           newRelatedX =
-            task.x1 +
-            taskListWidth -
+          datum.x1 +
+            datumListWidth -
             arrowIndent * 1.5 -
             scrollX -
             tooltipWidth;
         }
-        if (newRelatedX < taskListWidth) {
-          newRelatedX = svgContainerWidth + taskListWidth - tooltipWidth;
+        if (newRelatedX < datumListWidth) {
+          newRelatedX = svgContainerWidth + datumListWidth - tooltipWidth;
           newRelatedY += rowHeight;
         }
       }
@@ -84,17 +87,17 @@ export const Tooltip: React.FC<TooltipProps> = ({
       setRelatedX(newRelatedX);
     }
   }, [
-    tooltipRef,
-    task,
     arrowIndent,
+    datum,
+    datumListWidth,
+    headerHeight,
+    rowHeight,
+    rtl,
     scrollX,
     scrollY,
-    headerHeight,
-    taskListWidth,
-    rowHeight,
     svgContainerHeight,
     svgContainerWidth,
-    rtl,
+    tooltipRef,
   ]);
 
   return (
@@ -107,16 +110,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
       style={{ left: relatedX, top: relatedY }}
     >
-      <TooltipContent task={task} fontSize={fontSize} fontFamily={fontFamily} />
+      <TooltipContent datum={datum} fontSize={fontSize} fontFamily={fontFamily} />
     </div>
   );
 };
 
 export const StandardTooltipContent: React.FC<{
-  task: Task;
+  datum: Datum;
   fontSize: string;
   fontFamily: string;
-}> = ({ task, fontSize, fontFamily }) => {
+}> = ({ datum, fontSize, fontFamily }) => {
   const style = {
     fontSize,
     fontFamily,
@@ -124,21 +127,21 @@ export const StandardTooltipContent: React.FC<{
   return (
     <div className={styles.tooltipDefaultContainer} style={style}>
       <b style={{ fontSize: fontSize + 6 }}>{`${
-        task.name
-      }: ${task.start.getDate()}-${
-        task.start.getMonth() + 1
-      }-${task.start.getFullYear()} - ${task.end.getDate()}-${
-        task.end.getMonth() + 1
-      }-${task.end.getFullYear()}`}</b>
-      {task.end.getTime() - task.start.getTime() !== 0 && (
+        datum.name
+      }: ${datum.start.getDate()}-${
+        datum.start.getMonth() + 1
+      }-${datum.start.getFullYear()} - ${datum.end.getDate()}-${
+        datum.end.getMonth() + 1
+      }-${datum.end.getFullYear()}`}</b>
+      {datum.end.getTime() - datum.start.getTime() !== 0 && (
         <p className={styles.tooltipDefaultContainerParagraph}>{`Duration: ${~~(
-          (task.end.getTime() - task.start.getTime()) /
+          (datum.end.getTime() - datum.start.getTime()) /
           (1000 * 60 * 60 * 24)
         )} day(s)`}</p>
       )}
 
       <p className={styles.tooltipDefaultContainerParagraph}>
-        {!!task.progress && `Progress: ${task.progress} %`}
+        {!!datum.progress && `Progress: ${datum.progress} %`}
       </p>
     </div>
   );

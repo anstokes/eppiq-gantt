@@ -1,13 +1,15 @@
 import React, { SyntheticEvent, useRef, useEffect } from "react";
+
+// Styles
 import styles from "./horizontal-scroll.module.css";
 
 export const HorizontalScroll: React.FC<{
+  datumListWidth: number;
+  onScroll: (event: SyntheticEvent<HTMLDivElement>) => void;
   scroll: number;
   svgWidth: number;
-  taskListWidth: number;
   rtl: boolean;
-  onScroll: (event: SyntheticEvent<HTMLDivElement>) => void;
-}> = ({ scroll, svgWidth, taskListWidth, rtl, onScroll }) => {
+}> = ({ scroll, svgWidth, datumListWidth, rtl, onScroll }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,8 +23,8 @@ export const HorizontalScroll: React.FC<{
       dir="ltr"
       style={{
         margin: rtl
-          ? `0px ${taskListWidth}px 0px 0px`
-          : `0px 0px 0px ${taskListWidth}px`,
+          ? `0px ${datumListWidth}px 0px 0px`
+          : `0px 0px 0px ${datumListWidth}px`,
       }}
       className={styles.scrollWrapper}
       onScroll={onScroll}

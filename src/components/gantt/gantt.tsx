@@ -5,27 +5,30 @@ import React, {
   useEffect,
   useMemo,
 } from "react";
-import { ViewMode, GanttProps, Task } from "../../types/public-types";
+
+import { Datum, GanttProps, ViewMode } from "../../types/public-types";
 import { GridProps } from "../grid/grid";
 import { ganttDateRange, seedDates } from "../../helpers/date-helper";
 import { CalendarProps } from "../calendar/calendar";
 import { TaskGanttContentProps } from "./task-gantt-content";
-import { TaskListHeaderDefault } from "../task-list/task-list-header";
-import { TaskListTableDefault } from "../task-list/task-list-table";
+import { DatumListProps, DatumList } from "../datum-list/datum-list";
+import { DatumListHeaderDefault } from "../datum-list/datum-list-header";
+import { DatumListTableDefault } from "../datum-list/datum-list-table";
 import { StandardTooltipContent, Tooltip } from "../other/tooltip";
 import { VerticalScroll } from "../other/vertical-scroll";
-import { TaskListProps, TaskList } from "../task-list/task-list";
 import { TaskGantt } from "./task-gantt";
-import { BarTask } from "../../types/bar-task";
-import { convertToBarTasks } from "../../helpers/bar-helper";
+import { BarDatum } from "../../types/bar-datum";
+import { convertToBarData } from "../../helpers/bar-helper";
 import { GanttEvent } from "../../types/gantt-task-actions";
 import { DateSetup } from "../../types/date-setup";
 import { HorizontalScroll } from "../other/horizontal-scroll";
-import { removeHiddenTasks, sortTasks } from "../../helpers/other-helper";
+import { getRows, removeHiddenData, sortData } from "../../helpers/other-helper";
+
+// Styles
 import styles from "./gantt.module.css";
 
 export const Gantt: React.FunctionComponent<GanttProps> = ({
-  tasks,
+  data,
   headerHeight = 50,
   columnWidth = 60,
   listCellWidth = "155px",
@@ -33,6 +36,7 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   ganttHeight = 0,
   viewMode = ViewMode.Day,
   preStepsCount = 1,
+  postStepsCount = 1,
   locale = "en-GB",
   barFill = 60,
   barCornerRadius = 3,
@@ -56,8 +60,8 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   todayColor = "rgba(252, 248, 227, 0.5)",
   viewDate,
   TooltipContent = StandardTooltipContent,
-  TaskListHeader = TaskListHeaderDefault,
-  TaskListTable = TaskListTableDefault,
+  DatumListHeader = DatumListHeaderDefault,
+  DatumListTable = DatumListTableDefault,
   onDateChange,
   onProgressChange,
   onDoubleClick,
@@ -66,20 +70,22 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   onSelect,
   onExpanderClick,
 }) => {
+  // console.log('Rendered Gantt');
+  const datumListRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const taskListRef = useRef<HTMLDivElement>(null);
+
   const [dateSetup, setDateSetup] = useState<DateSetup>(() => {
-    const [startDate, endDate] = ganttDateRange(tasks, viewMode, preStepsCount);
+    const [startDate, endDate] = ganttDateRange(data, viewMode, preStepsCount, postStepsCount,);
     return { viewMode, dates: seedDates(startDate, endDate, viewMode) };
   });
   const [currentViewDate, setCurrentViewDate] = useState<Date | undefined>(
     undefined
   );
 
-  const [taskListWidth, setTaskListWidth] = useState(0);
+  const [datumListWidth, setDatumListWidth] = useState(0);
   const [svgContainerWidth, setSvgContainerWidth] = useState(0);
   const [svgContainerHeight, setSvgContainerHeight] = useState(ganttHeight);
-  const [barTasks, setBarTasks] = useState<BarTask[]>([]);
+  const [barData, setBarData] = useState<BarDatum[]>([]);
   const [ganttEvent, setGanttEvent] = useState<GanttEvent>({
     action: "",
   });
@@ -88,11 +94,11 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
     [rowHeight, barFill]
   );
 
-  const [selectedTask, setSelectedTask] = useState<BarTask>();
-  const [failedTask, setFailedTask] = useState<BarTask | null>(null);
+  const [selectedDatum, setSelectedDatum] = useState<BarDatum>();
+  const [failedDatum, setFailedDatum] = useState<BarDatum | null>(null);
 
   const svgWidth = dateSetup.dates.length * columnWidth;
-  const ganttFullHeight = barTasks.length * rowHeight;
+  const ganttFullHeight = barData.length * rowHeight;
 
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(-1);
@@ -100,17 +106,19 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
 
   // task change events
   useEffect(() => {
-    let filteredTasks: Task[];
+    let filteredData: Datum[];
     if (onExpanderClick) {
-      filteredTasks = removeHiddenTasks(tasks);
+      filteredData = removeHiddenData(data);
     } else {
-      filteredTasks = tasks;
+      filteredData = data;
     }
-    filteredTasks = filteredTasks.sort(sortTasks);
+    filteredData = filteredData.sort(sortData);
+    // console.log(filteredData);
     const [startDate, endDate] = ganttDateRange(
-      filteredTasks,
+      filteredData,
       viewMode,
-      preStepsCount
+      preStepsCount,
+      postStepsCount,
     );
     let newDates = seedDates(startDate, endDate, viewMode);
     if (rtl) {
@@ -120,9 +128,9 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
       }
     }
     setDateSetup({ dates: newDates, viewMode });
-    setBarTasks(
-      convertToBarTasks(
-        filteredTasks,
+    setBarData(
+      convertToBarData(
+        filteredData,
         newDates,
         columnWidth,
         rowHeight,
@@ -134,18 +142,21 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
         barProgressSelectedColor,
         barBackgroundColor,
         barBackgroundSelectedColor,
+        /*
         projectProgressColor,
         projectProgressSelectedColor,
         projectBackgroundColor,
         projectBackgroundSelectedColor,
+        */
         milestoneBackgroundColor,
         milestoneBackgroundSelectedColor
       )
     );
   }, [
-    tasks,
+    data,
     viewMode,
     preStepsCount,
+    postStepsCount,
     rowHeight,
     barCornerRadius,
     columnWidth,
@@ -196,63 +207,66 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   ]);
 
   useEffect(() => {
-    const { changedTask, action } = ganttEvent;
-    if (changedTask) {
+    const { changedDatum, action } = ganttEvent;
+    if (changedDatum) {
       if (action === "delete") {
         setGanttEvent({ action: "" });
-        setBarTasks(barTasks.filter(t => t.id !== changedTask.id));
+        setBarData(barData.filter(d => d.id !== changedDatum.id));
       } else if (
         action === "move" ||
         action === "end" ||
         action === "start" ||
         action === "progress"
       ) {
-        const prevStateTask = barTasks.find(t => t.id === changedTask.id);
+        const prevStateTask = barData.find(t => t.id === changedDatum.id);
         if (
           prevStateTask &&
-          (prevStateTask.start.getTime() !== changedTask.start.getTime() ||
-            prevStateTask.end.getTime() !== changedTask.end.getTime() ||
-            prevStateTask.progress !== changedTask.progress)
+          (prevStateTask.start.getTime() !== changedDatum.start.getTime() ||
+            prevStateTask.end.getTime() !== changedDatum.end.getTime() ||
+            prevStateTask.progress !== changedDatum.progress)
         ) {
           // actions for change
-          const newTaskList = barTasks.map(t =>
-            t.id === changedTask.id ? changedTask : t
+          const newData = barData.map(d =>
+            d.id === changedDatum.id ? changedDatum : d
           );
-          setBarTasks(newTaskList);
+          setBarData(newData);
         }
       }
     }
-  }, [ganttEvent, barTasks]);
+  }, [ganttEvent, barData]);
 
   useEffect(() => {
-    if (failedTask) {
-      setBarTasks(barTasks.map(t => (t.id !== failedTask.id ? t : failedTask)));
-      setFailedTask(null);
+    if (failedDatum) {
+      setBarData(barData.map(d => (d.id !== failedDatum.id ? d : failedDatum)));
+      setFailedDatum(null);
     }
-  }, [failedTask, barTasks]);
+  }, [failedDatum, barData]);
 
   useEffect(() => {
     if (!listCellWidth) {
-      setTaskListWidth(0);
+      setDatumListWidth(0);
     }
-    if (taskListRef.current) {
-      setTaskListWidth(taskListRef.current.offsetWidth);
+    if (datumListRef.current) {
+      setDatumListWidth(datumListRef.current.offsetWidth);
     }
-  }, [taskListRef, listCellWidth]);
+  }, [datumListRef, listCellWidth]);
 
   useEffect(() => {
     if (wrapperRef.current) {
-      setSvgContainerWidth(wrapperRef.current.offsetWidth - taskListWidth);
+      setSvgContainerWidth(wrapperRef.current.offsetWidth - datumListWidth);
     }
-  }, [wrapperRef, taskListWidth]);
+  }, [wrapperRef, datumListWidth]);
 
   useEffect(() => {
     if (ganttHeight) {
       setSvgContainerHeight(ganttHeight + headerHeight);
     } else {
-      setSvgContainerHeight(tasks.length * rowHeight + headerHeight);
+      // Length is now based on unique row count (not data length)
+      const rowCount = getRows(data).length;
+      // console.log(rowCount, data.length);
+      setSvgContainerHeight(rowCount * rowHeight + headerHeight);
     }
-  }, [ganttHeight, tasks, headerHeight, rowHeight]);
+  }, [ganttHeight, data, headerHeight, rowHeight]);
 
   // scroll events
   useEffect(() => {
@@ -367,138 +381,146 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   /**
    * Task select event
    */
-  const handleSelectedTask = (taskId: string) => {
-    const newSelectedTask = barTasks.find(t => t.id === taskId);
-    const oldSelectedTask = barTasks.find(
-      t => !!selectedTask && t.id === selectedTask.id
+  const handleSelectedDatum = (datumId: string) => {
+    const newSelectedDatum = barData.find(d => d.id === datumId);
+    const oldSelectedDatum = barData.find(
+      d => !!selectedDatum && d.id === selectedDatum.id
     );
     if (onSelect) {
-      if (oldSelectedTask) {
-        onSelect(oldSelectedTask, false);
+      if (oldSelectedDatum) {
+        onSelect(oldSelectedDatum, false);
       }
-      if (newSelectedTask) {
-        onSelect(newSelectedTask, true);
+      if (newSelectedDatum) {
+        onSelect(newSelectedDatum, true);
       }
     }
-    setSelectedTask(newSelectedTask);
+    setSelectedDatum(newSelectedDatum);
   };
-  const handleExpanderClick = (task: Task) => {
-    if (onExpanderClick && task.hideChildren !== undefined) {
-      onExpanderClick({ ...task, hideChildren: !task.hideChildren });
+
+  const handleExpanderClick = (data: Datum[]) => {
+    const dataWithChildren: Datum[] = data
+      .filter(({ hideChildren }) => hideChildren !== undefined);
+
+    if (onExpanderClick && dataWithChildren.length) {
+      onExpanderClick(dataWithChildren);
     }
   };
+
   const gridProps: GridProps = {
     columnWidth,
-    svgWidth,
-    tasks: tasks,
-    rowHeight,
+    data,
     dates: dateSetup.dates,
+    rowHeight,
+    rtl,
+    svgWidth,
     todayColor,
-    rtl,
   };
+
   const calendarProps: CalendarProps = {
+    columnWidth,
     dateSetup,
-    locale,
-    viewMode,
+    fontFamily,
+    fontSize,
     headerHeight,
-    columnWidth,
-    fontFamily,
-    fontSize,
+    locale,
     rtl,
+    viewMode,
   };
+
   const barProps: TaskGanttContentProps = {
-    tasks: barTasks,
-    dates: dateSetup.dates,
-    ganttEvent,
-    selectedTask,
-    rowHeight,
-    taskHeight,
-    columnWidth,
     arrowColor,
-    timeStep,
+    arrowIndent,
+    columnWidth,
+    data: barData,
+    dates: dateSetup.dates,
     fontFamily,
     fontSize,
-    arrowIndent,
-    svgWidth,
-    rtl,
-    setGanttEvent,
-    setFailedTask,
-    setSelectedTask: handleSelectedTask,
+    ganttEvent,
     onDateChange,
     onProgressChange,
     onDoubleClick,
     onClick,
     onDelete,
+    rowHeight,
+    rtl,
+    selectedDatum,
+    setGanttEvent,
+    setFailedDatum,
+    setSelectedDatum: handleSelectedDatum,
+    svgWidth,
+    taskHeight,
+    timeStep,
   };
 
-  const tableProps: TaskListProps = {
-    rowHeight,
-    rowWidth: listCellWidth,
+  const tableProps: DatumListProps = {
+    data: barData,
+    datumListRef,
+    DatumListHeader,
+    DatumListTable,
     fontFamily,
     fontSize,
-    tasks: barTasks,
-    locale,
-    headerHeight,
-    scrollY,
     ganttHeight,
+    headerHeight,
     horizontalContainerClass: styles.horizontalContainer,
-    selectedTask,
-    taskListRef,
-    setSelectedTask: handleSelectedTask,
+    locale,
     onExpanderClick: handleExpanderClick,
-    TaskListHeader,
-    TaskListTable,
+    rowHeight,
+    rowWidth: listCellWidth,
+    scrollY,
+    selectedDatum,
+    setSelectedDatum: handleSelectedDatum,
   };
+
   return (
     <div>
       <div
         className={styles.wrapper}
         onKeyDown={handleKeyDown}
-        tabIndex={0}
         ref={wrapperRef}
+        tabIndex={0}
       >
-        {listCellWidth && <TaskList {...tableProps} />}
+        {listCellWidth && <DatumList {...tableProps} />}
         <TaskGantt
-          gridProps={gridProps}
-          calendarProps={calendarProps}
           barProps={barProps}
+          calendarProps={calendarProps}
           ganttHeight={ganttHeight}
+          gridProps={gridProps}
           scrollY={scrollY}
           scrollX={scrollX}
         />
-        {ganttEvent.changedTask && (
+        {ganttEvent.changedDatum && (
           <Tooltip
             arrowIndent={arrowIndent}
-            rowHeight={rowHeight}
-            svgContainerHeight={svgContainerHeight}
-            svgContainerWidth={svgContainerWidth}
+            datum={ganttEvent.changedDatum}
+            datumListWidth={datumListWidth}
             fontFamily={fontFamily}
             fontSize={fontSize}
+            headerHeight={headerHeight}
+            rowHeight={rowHeight}
+            rtl={rtl}
             scrollX={scrollX}
             scrollY={scrollY}
-            task={ganttEvent.changedTask}
-            headerHeight={headerHeight}
-            taskListWidth={taskListWidth}
-            TooltipContent={TooltipContent}
-            rtl={rtl}
+            svgContainerHeight={svgContainerHeight}
+            svgContainerWidth={svgContainerWidth}
             svgWidth={svgWidth}
+            TooltipContent={TooltipContent}
           />
         )}
         <VerticalScroll
           ganttFullHeight={ganttFullHeight}
           ganttHeight={ganttHeight}
           headerHeight={headerHeight}
-          scroll={scrollY}
           onScroll={handleScrollY}
           rtl={rtl}
+          scroll={scrollY}
         />
       </div>
       <HorizontalScroll
-        svgWidth={svgWidth}
-        taskListWidth={taskListWidth}
-        scroll={scrollX}
-        rtl={rtl}
+        datumListWidth={datumListWidth}
         onScroll={handleScrollX}
+        rtl={rtl}
+        scroll={scrollX}
+        svgWidth={svgWidth}
       />
     </div>
   );

@@ -9,10 +9,22 @@ export enum ViewMode {
   QuarterYear = "QuarterYear",
   Year = "Year",
 }
-export type TaskType = "task" | "milestone" | "project";
-export interface Task {
+
+export type DatumType = "client" | "project" | "task" | "milestone";
+
+export interface DatumDateConstraint {
+  min?: Date;
+  max?: Date;
+}
+
+export interface DatumDateConstraints {
+  start?: DatumDateConstraint;
+  end?: DatumDateConstraint;
+}
+
+export interface Datum {
   id: string;
-  type: TaskType;
+  type: DatumType;
   name: string;
   start: Date;
   end: Date;
@@ -20,83 +32,82 @@ export interface Task {
    * From 0 to 100
    */
   progress: number;
+  additional?: any;
+  dateConstraints?: DatumDateConstraints;
+  dependencies?: string[];
+  displayOrder?: number;
+  hideChildren?: boolean;
+  isDisabled?: boolean;
+  parent?: string;
+  preventOverlap?: boolean;
+  row?: string;
   styles?: {
     backgroundColor?: string;
     backgroundSelectedColor?: string;
     progressColor?: string;
     progressSelectedColor?: string;
   };
-  isDisabled?: boolean;
-  project?: string;
-  dependencies?: string[];
-  hideChildren?: boolean;
-  displayOrder?: number;
 }
 
 export interface EventOption {
   /**
-   * Time step value for date changes.
-   */
-  timeStep?: number;
-  /**
    * Invokes on bar select on unselect.
    */
-  onSelect?: (task: Task, isSelected: boolean) => void;
+  onSelect?: (datum: Datum, isSelected: boolean) => void;
   /**
    * Invokes on bar double click.
    */
-  onDoubleClick?: (task: Task) => void;
+  onDoubleClick?: (datum: Datum) => void;
   /**
    * Invokes on bar click.
    */
-  onClick?: (task: Task) => void;
+  onClick?: (datum: Datum) => void;
   /**
    * Invokes on end and start time change. Chart undoes operation if method return false or error.
    */
   onDateChange?: (
-    task: Task,
-    children: Task[]
+    datum: Datum,
+    children: Datum[]
   ) => void | boolean | Promise<void> | Promise<boolean>;
   /**
    * Invokes on progress change. Chart undoes operation if method return false or error.
    */
   onProgressChange?: (
-    task: Task,
-    children: Task[]
+    datum: Datum,
+    children: Datum[]
   ) => void | boolean | Promise<void> | Promise<boolean>;
   /**
    * Invokes on delete selected task. Chart undoes operation if method return false or error.
    */
-  onDelete?: (task: Task) => void | boolean | Promise<void> | Promise<boolean>;
+  onDelete?: (datum: Datum) => void | boolean | Promise<void> | Promise<boolean>;
   /**
    * Invokes on expander on task list
    */
-  onExpanderClick?: (task: Task) => void;
+  onExpanderClick?: (data: Datum[]) => void;
+  /**
+   * Time step value for date changes.
+   */
+  timeStep?: number;
 }
 
 export interface DisplayOption {
-  viewMode?: ViewMode;
-  viewDate?: Date;
-  preStepsCount?: number;
   /**
    * Specifies the month name language. Able formats: ISO 639-2, Java Locale
    */
   locale?: string;
+  preStepsCount?: number;
+  postStepsCount?: number;
   rtl?: boolean;
+  viewMode?: ViewMode;
+  viewDate?: Date;
 }
 
 export interface StylingOption {
-  headerHeight?: number;
-  columnWidth?: number;
-  listCellWidth?: string;
-  rowHeight?: number;
-  ganttHeight?: number;
+  arrowColor?: string;
+  arrowIndent?: number;
   barCornerRadius?: number;
-  handleWidth?: number;
-  fontFamily?: string;
-  fontSize?: string;
   /**
-   * How many of row width can be taken by task.
+   * How many of row width can be taken by datum.
    * From 0 to 100
    */
   barFill?: number;
@@ -104,42 +115,48 @@ export interface StylingOption {
   barProgressSelectedColor?: string;
   barBackgroundColor?: string;
   barBackgroundSelectedColor?: string;
+  columnWidth?: number;
+  DatumListHeader?: React.FC<{
+    fontFamily: string;
+    fontSize: string;
+    headerHeight: number;
+    rowWidth: string;
+  }>;
+  DatumListTable?: React.FC<{
+    data: Datum[];
+    fontFamily: string;
+    fontSize: string;
+    locale: string;
+    onExpanderClick: (data: Datum[]) => void;
+    rowHeight: number;
+    rowWidth: string;
+    selectedDatumId: string;
+    /**
+     * Sets selected datum by id
+     */
+    setSelectedDatum: (datumId: string) => void;
+  }>;
+  fontFamily?: string;
+  fontSize?: string;
+  ganttHeight?: number;
+  handleWidth?: number;
+  headerHeight?: number;
+  listCellWidth?: string;
+  milestoneBackgroundColor?: string;
+  milestoneBackgroundSelectedColor?: string;
   projectProgressColor?: string;
   projectProgressSelectedColor?: string;
   projectBackgroundColor?: string;
   projectBackgroundSelectedColor?: string;
-  milestoneBackgroundColor?: string;
-  milestoneBackgroundSelectedColor?: string;
-  arrowColor?: string;
-  arrowIndent?: number;
+  rowHeight?: number;
   todayColor?: string;
   TooltipContent?: React.FC<{
-    task: Task;
+    datum: Datum;
     fontSize: string;
     fontFamily: string;
-  }>;
-  TaskListHeader?: React.FC<{
-    headerHeight: number;
-    rowWidth: string;
-    fontFamily: string;
-    fontSize: string;
-  }>;
-  TaskListTable?: React.FC<{
-    rowHeight: number;
-    rowWidth: string;
-    fontFamily: string;
-    fontSize: string;
-    locale: string;
-    tasks: Task[];
-    selectedTaskId: string;
-    /**
-     * Sets selected task by id
-     */
-    setSelectedTask: (taskId: string) => void;
-    onExpanderClick: (task: Task) => void;
   }>;
 }
 
 export interface GanttProps extends EventOption, DisplayOption, StylingOption {
-  tasks: Task[];
+  data: Datum[];
 }

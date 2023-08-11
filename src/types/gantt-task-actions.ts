@@ -1,4 +1,4 @@
-import { BarTask } from "./bar-task";
+import { BarDatum } from "./bar-datum";
 
 export type BarMoveAction = "progress" | "end" | "start" | "move";
 export type GanttContentMoveAction =
@@ -12,7 +12,7 @@ export type GanttContentMoveAction =
   | BarMoveAction;
 
 export type GanttEvent = {
-  changedTask?: BarTask;
-  originalSelectedTask?: BarTask;
+  changedDatum?: BarDatum;
+  originalSelectedDatum?: BarDatum;
   action: GanttContentMoveAction;
 };

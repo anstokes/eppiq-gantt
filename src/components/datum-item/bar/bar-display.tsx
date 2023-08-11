@@ -1,4 +1,6 @@
 import React from "react";
+
+// Styles
 import style from "./bar.module.css";
 
 type BarDisplayProps = {
