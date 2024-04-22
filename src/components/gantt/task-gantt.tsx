@@ -10,6 +10,7 @@ export type TaskGanttProps = {
   calendarProps: CalendarProps;
   barProps: TaskGanttContentProps;
   ganttHeight: number;
+  ganttFullHeight: number;
   scrollY: number;
   scrollX: number;
 };
@@ -18,6 +19,7 @@ export const TaskGantt: React.FC<TaskGanttProps> = ({
   calendarProps,
   barProps,
   ganttHeight,
+  ganttFullHeight,
   scrollY,
   scrollX,
 }) => {
@@ -43,6 +45,7 @@ export const TaskGantt: React.FC<TaskGanttProps> = ({
       className={styles.ganttVerticalContainer}
       ref={verticalGanttContainerRef}
       dir="ltr"
+      style={{ height: ganttFullHeight }}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

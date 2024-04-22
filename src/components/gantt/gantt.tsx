@@ -99,7 +99,7 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   const [failedDatum, setFailedDatum] = useState<BarDatum | null>(null);
 
   const svgWidth = dateSetup.dates.length * columnWidth;
-  const ganttFullHeight = barData.length * rowHeight;
+  const ganttFullHeight = (barData.length + 1) * rowHeight;
 
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(-1);
@@ -486,6 +486,7 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
           barProps={barProps}
           calendarProps={calendarProps}
           ganttHeight={ganttHeight}
+          ganttFullHeight={ganttFullHeight}
           gridProps={gridProps}
           scrollY={scrollY}
           scrollX={scrollX}
