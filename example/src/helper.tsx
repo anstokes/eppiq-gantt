@@ -11,6 +11,12 @@ interface hashIndex {
   entryIndex: number,
 }
 
+interface tag {
+  id: string,
+  name: string,
+  active: number,
+}
+
 interface trackerLogEntry {
   organisation_id: string,
   user_id: string,
@@ -19,6 +25,7 @@ interface trackerLogEntry {
   project_task_id?: string | null,
   start_at: string | Date,
   end_at: string | Date,
+  tags?: tag[],
   // Properties added during extrapolation
   id: string,
   name: string,
@@ -234,7 +241,7 @@ export function initData() {
     field: 'client_id',
     label: 'Client: ',
     type: 'client',
-  }, {
+  }/*, {
     field: 'project_id',
     label: 'Project: ',
     type: 'project',
@@ -242,7 +249,7 @@ export function initData() {
     field: 'project_task_id',
     label: 'Task: ',
     type: 'task',
-  }];
+  }*/];
 
   const extrapolatedEntries: trackerLogEntry[] = [];
   while (groupBy.length) {

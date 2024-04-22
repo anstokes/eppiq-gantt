@@ -1,3 +1,5 @@
+import { CSSProperties } from "react";
+
 export enum ViewMode {
   Hour = "Hour",
   QuarterDay = "Quarter Day",
@@ -150,6 +152,7 @@ export interface StylingOption {
   projectBackgroundSelectedColor?: string;
   rowHeight?: number;
   todayColor?: string;
+  style?: CSSProperties,
   TooltipContent?: React.FC<{
     datum: Datum;
     fontSize: string;

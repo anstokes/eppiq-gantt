@@ -59,6 +59,7 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
   arrowIndent = 20,
   todayColor = "rgba(252, 248, 227, 0.5)",
   viewDate,
+  style = undefined,
   TooltipContent = StandardTooltipContent,
   DatumListHeader = DatumListHeaderDefault,
   DatumListTable = DatumListTableDefault,
@@ -477,6 +478,7 @@ export const Gantt: React.FunctionComponent<GanttProps> = ({
         className={styles.wrapper}
         onKeyDown={handleKeyDown}
         ref={wrapperRef}
+        style={style}
         tabIndex={0}
       >
         {listCellWidth && <DatumList {...tableProps} />}
